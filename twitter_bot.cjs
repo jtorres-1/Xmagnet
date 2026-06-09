@@ -124,11 +124,11 @@ async function searchTweets(page, query) {
       const authorEl = article.querySelector('[data-testid="User-Name"]');
       const author = authorEl?.innerText?.split('\n')[0] || 'unknown';
 
-      // Only posts from last 24 hours
+      // Only posts from last 6 hours — catch while still active
       const timeAttr = timeEl?.getAttribute('datetime');
       if (timeAttr) {
         const tweetAge = Date.now() - new Date(timeAttr).getTime();
-        if (tweetAge > 24 * 60 * 60 * 1000) continue;
+        if (tweetAge > 6 * 60 * 60 * 1000) continue;
       }
 
       results.push({ tweetId, tweetUrl, author, text: text.substring(0, 200) });
