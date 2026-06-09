@@ -1,89 +1,54 @@
 require("dotenv").config();
 const puppeteer = require("puppeteer");
 const fs = require("fs");
-const path = require("path");
 
 const SESSION_PATH = "./session.json";
 const REPLIED_PATH = "./replied.json";
 const LOG_PATH = "./twitter_bot.log";
 
-const MAX_REPLIES_PER_CYCLE = 20;
-const MIN_DELAY_MS = 4 * 60 * 1000;
-const MAX_DELAY_MS = 7 * 60 * 1000;
-const CYCLE_INTERVAL_MS = 45 * 60 * 1000;
+const MAX_REPLIES_PER_CYCLE = 15;
+const MIN_DELAY_MS = 5 * 60 * 1000;
+const MAX_DELAY_MS = 8 * 60 * 1000;
+const CYCLE_INTERVAL_MS = 50 * 60 * 1000;
 
-const DEVHIRE_QUERIES = [
-  "need a dev asap",
-  "anyone know a good developer",
-  "need a website built asap",
-  "can someone build me a website",
-  "hiring a developer",
-  "need a site built",
-  "who builds websites",
-  "looking for a dev to hire",
-  "need someone to make me a website",
-  "where can i find a good developer",
-  "need a web developer asap",
-  "need a freelance dev",
-  "need an app built asap",
-  "need a python dev",
-  "lf developer",
-  "need a website for my small business",
-  "need help building a website",
-  "looking to hire a web developer",
-  "need a developer for my project",
-  "can anyone build me a website",
-];
-
+// Engagement bait posts where founders and business owners are active
 const MAPZAP_QUERIES = [
-  "need leads for my business",
-  "how do i find customers",
-  "need more clients",
-  "looking for business leads",
-  "need a lead list",
-  "struggling to find clients",
-  "need more customers asap",
-  "where to get leads",
-  "how to get more clients",
-  "need prospects",
-  "need local business contacts",
-  "how do i find local businesses",
-  "need business leads asap",
-  "where can i find leads",
+  "drop your project below",
+  "what are you building",
+  "founders drop your startup",
+  "show us what you're working on",
+  "what's your biggest challenge this month",
+  "drop your startup link",
+  "builders drop",
+  "what are you working on right now",
+  "drop what you're working on",
+  "show me what you're building",
+  "founders show your product",
+  "entrepreneurs drop your business",
+  "small business owners drop",
+  "what problem are you solving",
+  "drop your saas below",
+  "show your product below",
+  "what are you selling",
+  "business owners drop",
+  "drop your business below",
+  "looking to connect with founders",
 ];
 
-const DEV_AGENCY_SIGNALS = [
-  "i offer", "i build", "i provide", "my services", "check out my",
-  "i am a developer", "i specialize in", "hire me", "my portfolio",
-  "i can build", "i develop", "i create websites", "i code",
-  "available for hire", "for hire", "i do freelance",
-  "offering my services", "i am a programmer", "i am a freelancer",
-  "looking for clients", "seeking clients", "web design agency",
-  "digital agency", "we build", "we develop", "we offer",
-  "our services", "our portfolio", "book a call", "free consultation",
-  "taking on new clients", "accepting new clients", "open for work",
-  "upwork", "fiverr", "toptal",
-];
-
-const FIRST_PERSON_BUYER_SIGNALS = [
-  "i need", "i'm looking", "i am looking", "i want",
-  "i have a budget", "i will pay", "i need to hire",
-  "i'm trying", "i need help", "i need someone",
-  "how do i", "how can i", "anyone know",
-  "recommendations for", "looking for recommendations",
-  "can anyone", "does anyone know",
-];
-
-const DEVHIRE_REPLIES = [
-  `hey, I'm a Python dev in LA available this week. built claudiascleaningla.com and mapzap.org (live SaaS with Stripe payments). websites, scrapers, bots, AI integrations. 48hr delivery, flat fee from $500. DM me a scope`,
-  `hey, I build websites and automation tools. recent work: claudiascleaningla.com and mapzap.org. flat fee, 48hr turnaround, no hourly. DM me what you need`,
-  `hey, available for freelance work this week. built live production projects including mapzap.org and claudiascleaningla.com. websites start at $500, automation at $800. DM me`,
+// Signals that confirm the original poster is running an engagement thread
+const ENGAGEMENT_SIGNALS = [
+  "drop", "below", "building", "working on", "founders",
+  "builders", "entrepreneurs", "startup", "saas", "business owners",
+  "show us", "show me", "what are you", "connect with",
+  "let's see", "lets see", "check out", "share your",
 ];
 
 const MAPZAP_REPLIES = [
-  `hey, built something that might help. mapzap.org pulls 100 local business leads from Google Maps in 60 seconds as a CSV. name, phone, address, website. $49/month unlimited searches. free preview, no card needed`,
-  `hey, mapzap.org might be what you need. type a business type and city, get 100 leads as a CSV instantly. $49/month unlimited. try 5 free first at mapzap.org`,
-  `hey check out mapzap.org. pulls local business leads from Google Maps in 60 seconds. name, phone, address, website as a downloadable CSV. $49/month unlimited searches, free preview available`,
+  `building something? if you need local business leads for outreach or prospecting, mapzap.org pulls 100 leads from Google Maps in 60 seconds as a CSV. $49/month unlimited searches, free preview at mapzap.org`,
+  `cool thread. if anyone here does cold outreach or needs local business leads, built mapzap.org for that. 100 leads in 60 seconds from Google Maps, name phone address website as a CSV. $49/month unlimited, free preview available`,
+  `nice. if anyone in this thread needs local business leads for prospecting, mapzap.org pulls 100 from Google Maps in 60 seconds. free to try at mapzap.org`,
+  `great thread. dropping this here for anyone who needs local business leads — mapzap.org pulls 100 businesses from Google Maps in 60 seconds as a downloadable CSV. $49/month unlimited searches`,
+  `for anyone in this thread doing outreach or prospecting, built mapzap.org — pulls 100 local business leads from Google Maps in 60 seconds. name, phone, address, website as a CSV. free preview at mapzap.org`,
 ];
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -109,7 +74,7 @@ async function loadSession(page) {
   if (!fs.existsSync(SESSION_PATH)) throw new Error("No session found. Run twitter_login.cjs first.");
   const cookies = JSON.parse(fs.readFileSync(SESSION_PATH));
   await page.setCookie(...cookies);
-  await page.goto("https://twitter.com/home", { waitUntil: "networkidle2", timeout: 30000 });
+  await page.goto("https://x.com/home", { waitUntil: "networkidle2", timeout: 30000 });
   await sleep(rand(3000, 5000));
   if (page.url().includes("login")) throw new Error("Session expired. Run twitter_login.cjs again.");
   log("INFO", "Session loaded.");
@@ -117,17 +82,16 @@ async function loadSession(page) {
 
 async function searchTweets(page, query) {
   log("SEARCH", `Searching: "${query}"`);
-  const url = `https://twitter.com/search?q=${encodeURIComponent(query)}&f=live&src=typed_query`;
+  const url = `https://x.com/search?q=${encodeURIComponent(query)}&f=live&src=typed_query`;
   await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
   await sleep(rand(3000, 5000));
 
-  // Scroll to load tweets
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 3; i++) {
     await page.evaluate(() => window.scrollBy(0, 600));
     await sleep(rand(1500, 2500));
   }
 
-  const tweets = await page.evaluate((devAgencySignals, firstPersonBuyerSignals) => {
+  const tweets = await page.evaluate((engagementSignals) => {
     const results = [];
     const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
 
@@ -137,9 +101,14 @@ async function searchTweets(page, query) {
       const text = textEl.innerText?.toLowerCase() || '';
       if (!text || text.length < 20) continue;
 
-      // Must not be seller — query match already confirms buyer intent
-      const isSeller = devAgencySignals.some(s => text.includes(s));
-      if (isSeller) continue;
+      // Must be an engagement bait post
+      const isEngagement = engagementSignals.some(s => text.includes(s));
+      if (!isEngagement) continue;
+
+      // Must have decent engagement — skip posts with 0 replies
+      const replyCountEl = article.querySelector('[data-testid="reply"]');
+      const replyCount = parseInt(replyCountEl?.innerText?.trim() || '0');
+      if (replyCount < 2) continue;
 
       // Get tweet URL
       const timeEl = article.querySelector('time');
@@ -147,7 +116,6 @@ async function searchTweets(page, query) {
       const tweetUrl = linkEl ? linkEl.href : null;
       if (!tweetUrl) continue;
 
-      // Get tweet ID from URL
       const match = tweetUrl.match(/status\/(\d+)/);
       const tweetId = match ? match[1] : null;
       if (!tweetId) continue;
@@ -156,7 +124,7 @@ async function searchTweets(page, query) {
       const authorEl = article.querySelector('[data-testid="User-Name"]');
       const author = authorEl?.innerText?.split('\n')[0] || 'unknown';
 
-      // Check tweet age - skip if older than 24 hours
+      // Only posts from last 24 hours
       const timeAttr = timeEl?.getAttribute('datetime');
       if (timeAttr) {
         const tweetAge = Date.now() - new Date(timeAttr).getTime();
@@ -167,9 +135,9 @@ async function searchTweets(page, query) {
     }
 
     return results;
-  }, DEV_AGENCY_SIGNALS, FIRST_PERSON_BUYER_SIGNALS);
+  }, ENGAGEMENT_SIGNALS);
 
-  log("SEARCH", `Found ${tweets.length} buyer tweets for "${query}"`);
+  log("SEARCH", `Found ${tweets.length} engagement posts for "${query}"`);
   return tweets;
 }
 
@@ -178,42 +146,47 @@ async function replyToTweet(page, tweet, replyText) {
     await page.goto(tweet.tweetUrl, { waitUntil: "networkidle2", timeout: 30000 });
     await sleep(rand(3000, 5000));
 
-    // Click reply button
-    const replyBtn = await page.evaluateHandle(() => {
+    // Click reply button on the original tweet
+    const replyHandle = await page.evaluateHandle(() => {
       const btns = Array.from(document.querySelectorAll('[data-testid="reply"]'));
       return btns[0] || null;
     });
 
-    const replyEl = replyBtn.asElement();
+    const replyEl = replyHandle.asElement();
     if (!replyEl) {
-      log("SKIP", `No reply button found for ${tweet.tweetId}`);
+      log("SKIP", `No reply button for ${tweet.tweetId}`);
       return "no_reply_btn";
     }
 
     await replyEl.click();
     await sleep(rand(2000, 3000));
 
-    // Type reply in the modal
-    const typed = await page.evaluate((text) => {
-      const editor = document.querySelector('[data-testid="tweetTextarea_0"]') ||
-                     document.querySelector('[contenteditable="true"][role="textbox"]');
-      if (!editor) return false;
-      editor.focus();
-      return true;
-    }, replyText);
+    // Find the reply text area in the modal
+    const editorHandle = await page.evaluateHandle(() => {
+      return document.querySelector('[data-testid="tweetTextarea_0"]') ||
+             document.querySelector('[contenteditable="true"][role="textbox"]') ||
+             null;
+    });
 
-    if (!typed) {
-      log("SKIP", `Could not focus reply box for ${tweet.tweetId}`);
+    const editor = editorHandle.asElement();
+    if (!editor) {
+      log("SKIP", `No editor for ${tweet.tweetId}`);
       return "no_editor";
     }
 
+    await editor.click();
+    await sleep(rand(500, 1000));
     await page.keyboard.type(replyText, { delay: rand(30, 60) });
     await sleep(rand(2000, 3000));
 
-    // Click reply/send button
+    // Click the Reply/send button
     const sent = await page.evaluate(() => {
       const btns = Array.from(document.querySelectorAll('[data-testid="tweetButton"]'));
-      const sendBtn = btns.find(b => b.innerText?.trim().toLowerCase() === 'reply' && b.offsetParent !== null);
+      const sendBtn = btns.find(b =>
+        b.innerText?.trim().toLowerCase() === 'reply' &&
+        b.offsetParent !== null &&
+        !b.disabled
+      );
       if (sendBtn) { sendBtn.click(); return true; }
       return false;
     });
@@ -237,21 +210,21 @@ async function runCycle() {
   const replied = loadReplied();
   let repliesThisCycle = 0;
 
-  const browser = await puppeteer.launch({ headless: false, defaultViewport: null });
+  const browser = await puppeteer.launch({
+    headless: false,
+    defaultViewport: null,
+    executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    args: ['--no-sandbox', '--disable-blink-features=AutomationControlled'],
+  });
   const page = await browser.newPage();
   await page.setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
   try {
     await loadSession(page);
 
-    const allQueries = [
-      ...DEVHIRE_QUERIES.map(q => ({ query: q, type: "DEVHIRE" })),
-      ...MAPZAP_QUERIES.map(q => ({ query: q, type: "MAPZAP" })),
-    ];
-
-    for (const { query, type } of allQueries) {
+    for (const query of MAPZAP_QUERIES) {
       if (repliesThisCycle >= MAX_REPLIES_PER_CYCLE) {
-        log("INFO", `Hit max replies per cycle (${MAX_REPLIES_PER_CYCLE}). Stopping.`);
+        log("INFO", `Hit max replies (${MAX_REPLIES_PER_CYCLE}). Stopping.`);
         break;
       }
 
@@ -264,7 +237,7 @@ async function runCycle() {
           continue;
         }
 
-        const replyText = type === "DEVHIRE" ? pick(DEVHIRE_REPLIES) : pick(MAPZAP_REPLIES);
+        const replyText = pick(MAPZAP_REPLIES);
         const result = await replyToTweet(page, tweet, replyText);
 
         if (result === "replied") {
@@ -286,12 +259,12 @@ async function runCycle() {
   }
 
   await browser.close();
-  log("INFO", `Cycle complete. Replied to ${repliesThisCycle} tweets.`);
+  log("INFO", `Cycle complete. Replied to ${repliesThisCycle} posts.`);
 }
 
 (async () => {
   console.log("=".repeat(60));
-  console.log("TwitterMagnet -- Search and Reply Bot");
+  console.log("XMagnet -- MapZap Engagement Poster");
   console.log("=".repeat(60));
 
   while (true) {
