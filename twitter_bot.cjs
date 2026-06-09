@@ -13,31 +13,43 @@ const MAX_DELAY_MS = 7 * 60 * 1000;
 const CYCLE_INTERVAL_MS = 45 * 60 * 1000;
 
 const DEVHIRE_QUERIES = [
-  "I need a web developer",
-  "need a website built",
-  "looking for a developer",
-  "need someone to build my website",
-  "need a python developer",
-  "looking to hire a developer",
-  "need an app built",
-  "need a freelance developer",
-  "need a website for my business",
-  "anyone know a good web developer",
-  "looking for web developer recommendations",
-  "need help with my website",
+  "need a dev asap",
+  "anyone know a good developer",
+  "need a website built asap",
+  "can someone build me a website",
+  "hiring a developer",
+  "need a site built",
+  "who builds websites",
+  "looking for a dev to hire",
+  "need someone to make me a website",
+  "where can i find a good developer",
+  "need a web developer asap",
+  "need a freelance dev",
+  "need an app built asap",
+  "need a python dev",
+  "lf developer",
+  "need a website for my small business",
+  "need help building a website",
+  "looking to hire a web developer",
+  "need a developer for my project",
+  "can anyone build me a website",
 ];
 
 const MAPZAP_QUERIES = [
   "need leads for my business",
-  "how do I find customers",
-  "need more clients for my business",
+  "how do i find customers",
+  "need more clients",
   "looking for business leads",
   "need a lead list",
-  "how to find local businesses",
-  "need prospects for my business",
   "struggling to find clients",
-  "need more customers",
-  "where to get business leads",
+  "need more customers asap",
+  "where to get leads",
+  "how to get more clients",
+  "need prospects",
+  "need local business contacts",
+  "how do i find local businesses",
+  "need business leads asap",
+  "where can i find leads",
 ];
 
 const DEV_AGENCY_SIGNALS = [
@@ -125,11 +137,7 @@ async function searchTweets(page, query) {
       const text = textEl.innerText?.toLowerCase() || '';
       if (!text || text.length < 20) continue;
 
-      // Must have buyer signal
-      const isBuyer = firstPersonBuyerSignals.some(s => text.includes(s));
-      if (!isBuyer) continue;
-
-      // Must not be seller
+      // Must not be seller — query match already confirms buyer intent
       const isSeller = devAgencySignals.some(s => text.includes(s));
       if (isSeller) continue;
 
