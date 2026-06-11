@@ -11,7 +11,6 @@ const MIN_DELAY_MS = 5 * 60 * 1000;
 const MAX_DELAY_MS = 8 * 60 * 1000;
 const CYCLE_INTERVAL_MS = 50 * 60 * 1000;
 
-// Engagement bait posts where founders and business owners are active
 const MAPZAP_QUERIES = [
   "drop your project below",
   "what are you building",
@@ -35,12 +34,29 @@ const MAPZAP_QUERIES = [
   "looking to connect with founders",
 ];
 
-// Signals that confirm the original poster is running an engagement thread
+const AGENCYHIRE_QUERIES = [
+  "how do I get clients for my agency",
+  "struggling to get agency clients",
+  "agency outreach not working",
+  "how to scale my smma",
+  "need more clients for my agency",
+  "agency owner need help",
+  "how to get smma clients",
+  "cold outreach not converting",
+  "agency growth problems",
+  "how to automate outreach",
+];
+
 const ENGAGEMENT_SIGNALS = [
   "drop", "below", "building", "working on", "founders",
   "builders", "entrepreneurs", "startup", "saas", "business owners",
   "show us", "show me", "what are you", "connect with",
   "let's see", "lets see", "check out", "share your",
+];
+
+const AGENCY_SIGNALS = [
+  "agency", "smma", "clients", "outreach", "scale", "automate",
+  "cold outreach", "lead gen", "getting clients", "struggling",
 ];
 
 const MAPZAP_REPLIES = [
@@ -49,6 +65,13 @@ const MAPZAP_REPLIES = [
   `nice. if anyone in this thread needs local business leads for prospecting, mapzap.org pulls 100 from Google Maps in 60 seconds. free to try at mapzap.org`,
   `great thread. dropping this here for anyone who needs local business leads — mapzap.org pulls 100 businesses from Google Maps in 60 seconds as a downloadable CSV. $49/month unlimited searches`,
   `for anyone in this thread doing outreach or prospecting, built mapzap.org — pulls 100 local business leads from Google Maps in 60 seconds. name, phone, address, website as a CSV. free preview at mapzap.org`,
+];
+
+const AGENCYHIRE_REPLIES = [
+  `i automate agency outreach — built a system that sends 1000+ targeted messages per day across Reddit, Facebook, Discord, and X to your ideal clients. $1,500 to deploy on your accounts in 48hrs, $500/month retainer. proof: mapzap.org. DM me`,
+  `this is solvable with automation. i built an outreach stack that runs 24/7 across Reddit, Facebook, Discord, and X. finds buyers in your niche, messages them automatically. $1,500 setup, $500/month after. https://buy.stripe.com/9B6eVd7vteL23kedQ22Ry0d`,
+  `built an automated outreach system for exactly this. 1000+ targeted messages per day to people actively looking for your service. deploy on your agency in 48hrs for $1,500 flat. $500/month retainer. DM me a scope`,
+  `scale outreach without hiring. full automation stack across Reddit, Facebook, Discord, X — finds your buyers, messages them, runs while you sleep. $1,500 setup, $500/month. proof: mapzap.org marketed entirely with this. https://buy.stripe.com/9B6eVd7vteL23kedQ22Ry0d`,
 ];
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -80,7 +103,7 @@ async function loadSession(page) {
   log("INFO", "Session loaded.");
 }
 
-async function searchTweets(page, query) {
+async function searchTweets(page, query, signals) {
   log("SEARCH", `Searching: "${query}"`);
   const url = `https://x.com/search?q=${encodeURIComponent(query)}&f=live&src=typed_query`;
   await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
@@ -91,7 +114,7 @@ async function searchTweets(page, query) {
     await sleep(rand(1500, 2500));
   }
 
-  const tweets = await page.evaluate((engagementSignals) => {
+  const tweets = await page.evaluate((sigs) => {
     const results = [];
     const articles = Array.from(document.querySelectorAll('article[data-testid="tweet"]'));
 
@@ -101,16 +124,13 @@ async function searchTweets(page, query) {
       const text = textEl.innerText?.toLowerCase() || '';
       if (!text || text.length < 20) continue;
 
-      // Must be an engagement bait post
-      const isEngagement = engagementSignals.some(s => text.includes(s));
-      if (!isEngagement) continue;
+      const isMatch = sigs.some(s => text.includes(s));
+      if (!isMatch) continue;
 
-      // Must have decent engagement — skip posts with 0 replies
       const replyCountEl = article.querySelector('[data-testid="reply"]');
       const replyCount = parseInt(replyCountEl?.innerText?.trim() || '0');
       if (replyCount < 2) continue;
 
-      // Get tweet URL
       const timeEl = article.querySelector('time');
       const linkEl = timeEl?.closest('a');
       const tweetUrl = linkEl ? linkEl.href : null;
@@ -120,11 +140,9 @@ async function searchTweets(page, query) {
       const tweetId = match ? match[1] : null;
       if (!tweetId) continue;
 
-      // Get author
       const authorEl = article.querySelector('[data-testid="User-Name"]');
       const author = authorEl?.innerText?.split('\n')[0] || 'unknown';
 
-      // Only posts from last 6 hours — catch while still active
       const timeAttr = timeEl?.getAttribute('datetime');
       if (timeAttr) {
         const tweetAge = Date.now() - new Date(timeAttr).getTime();
@@ -135,9 +153,9 @@ async function searchTweets(page, query) {
     }
 
     return results;
-  }, ENGAGEMENT_SIGNALS);
+  }, signals);
 
-  log("SEARCH", `Found ${tweets.length} engagement posts for "${query}"`);
+  log("SEARCH", `Found ${tweets.length} posts for "${query}"`);
   return tweets;
 }
 
@@ -146,7 +164,6 @@ async function replyToTweet(page, tweet, replyText) {
     await page.goto(tweet.tweetUrl, { waitUntil: "networkidle2", timeout: 30000 });
     await sleep(rand(3000, 5000));
 
-    // Click reply button on the original tweet
     const replyHandle = await page.evaluateHandle(() => {
       const btns = Array.from(document.querySelectorAll('[data-testid="reply"]'));
       return btns[0] || null;
@@ -161,7 +178,6 @@ async function replyToTweet(page, tweet, replyText) {
     await replyEl.click();
     await sleep(rand(2000, 3000));
 
-    // Find the reply text area in the modal
     const editorHandle = await page.evaluateHandle(() => {
       return document.querySelector('[data-testid="tweetTextarea_0"]') ||
              document.querySelector('[contenteditable="true"][role="textbox"]') ||
@@ -179,7 +195,6 @@ async function replyToTweet(page, tweet, replyText) {
     await page.keyboard.type(replyText, { delay: rand(30, 60) });
     await sleep(rand(2000, 3000));
 
-    // Click the Reply/send button
     const sent = await page.evaluate(() => {
       const btns = Array.from(document.querySelectorAll('[data-testid="tweetButton"]'));
       const sendBtn = btns.find(b =>
@@ -222,13 +237,20 @@ async function runCycle() {
   try {
     await loadSession(page);
 
-    for (const query of MAPZAP_QUERIES) {
+    // Alternate between MAPZAP and AGENCYHIRE queries
+    const allQueries = [
+      ...MAPZAP_QUERIES.map(q => ({ query: q, type: "MAPZAP" })),
+      ...AGENCYHIRE_QUERIES.map(q => ({ query: q, type: "AGENCYHIRE" })),
+    ].sort(() => Math.random() - 0.5);
+
+    for (const { query, type } of allQueries) {
       if (repliesThisCycle >= MAX_REPLIES_PER_CYCLE) {
         log("INFO", `Hit max replies (${MAX_REPLIES_PER_CYCLE}). Stopping.`);
         break;
       }
 
-      const tweets = await searchTweets(page, query);
+      const signals = type === "AGENCYHIRE" ? AGENCY_SIGNALS : ENGAGEMENT_SIGNALS;
+      const tweets = await searchTweets(page, query, signals);
 
       for (const tweet of tweets) {
         if (repliesThisCycle >= MAX_REPLIES_PER_CYCLE) break;
@@ -237,14 +259,14 @@ async function runCycle() {
           continue;
         }
 
-        const replyText = pick(MAPZAP_REPLIES);
+        const replyText = type === "AGENCYHIRE" ? pick(AGENCYHIRE_REPLIES) : pick(MAPZAP_REPLIES);
         const result = await replyToTweet(page, tweet, replyText);
 
         if (result === "replied") {
           replied[tweet.tweetId] = new Date().toISOString();
           saveReplied(replied);
           repliesThisCycle++;
-          log("INFO", `${repliesThisCycle}/${MAX_REPLIES_PER_CYCLE} replies this cycle. Waiting ${Math.round(MIN_DELAY_MS / 60000)} to ${Math.round(MAX_DELAY_MS / 60000)}min...`);
+          log("INFO", `${repliesThisCycle}/${MAX_REPLIES_PER_CYCLE} replies [${type}]. Waiting ${Math.round(MIN_DELAY_MS/60000)} to ${Math.round(MAX_DELAY_MS/60000)}min...`);
           await sleep(rand(MIN_DELAY_MS, MAX_DELAY_MS));
         }
 
@@ -264,7 +286,7 @@ async function runCycle() {
 
 (async () => {
   console.log("=".repeat(60));
-  console.log("XMagnet -- MapZap Engagement Poster");
+  console.log("XMagnet -- MapZap + AgencyHire Engagement Poster");
   console.log("=".repeat(60));
 
   while (true) {
