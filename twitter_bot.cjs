@@ -82,10 +82,10 @@ const AGENCYHIRE_REPLIES = [
   `scale outreach without hiring. full automation stack across Reddit, Facebook, Discord, X. finds your buyers, messages them, runs while you sleep. $1,500 setup, $500/month. proof: mapzap.org marketed entirely with this. https://buy.stripe.com/9B6eVd7vteL23kedQ22Ry0d`,
 ];
 const AUTOSUB_REPLIES = [
-  `built AutoSub for exactly this. it automates your Reddit outreach. connect your account, set your keywords and offer, it finds people posting about needing what you sell and DMs them automatically 24/7. $47/month at autosub.mooo.com`,
-  `this is what AutoSub solves. automated Reddit DM outreach. you set it up once, it runs forever finding buyers and messaging them. 200+ targeted DMs per day. $47/month at autosub.mooo.com`,
-  `built a tool for this. AutoSub scrapes Reddit globally for buyer intent posts matching your keywords and sends your DM automatically. connect your Reddit account and it runs 24/7. $47/month. autosub.mooo.com`,
-  `AutoSub handles this. connects to your Reddit account, finds people actively looking for what you sell, DMs them automatically. live dashboard showing all activity. $47/month at autosub.mooo.com`,
+  `built AutoSub for exactly this. it automates your Reddit outreach. connect your account, set your keywords and offer, it finds people posting about needing what you sell and DMs them automatically 24/7. $47/month at autosub.online`,
+  `this is what AutoSub solves. automated Reddit DM outreach. you set it up once, it runs forever finding buyers and messaging them. 200+ targeted DMs per day. $47/month at autosub.online`,
+  `built a tool for this. AutoSub scrapes Reddit globally for buyer intent posts matching your keywords and sends your DM automatically. connect your Reddit account and it runs 24/7. $47/month. autosub.online`,
+  `AutoSub handles this. connects to your Reddit account, finds people actively looking for what you sell, DMs them automatically. live dashboard showing all activity. $47/month at autosub.online`,
 ];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
