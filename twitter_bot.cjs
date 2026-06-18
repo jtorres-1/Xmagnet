@@ -8,40 +8,36 @@ const MAX_REPLIES_PER_CYCLE = 15;
 const MIN_DELAY_MS = 5 * 60 * 1000;
 const MAX_DELAY_MS = 8 * 60 * 1000;
 const CYCLE_INTERVAL_MS = 50 * 60 * 1000;
+
+// Replaced generic engagement-bait queries ("drop your project below") with actual
+// buyer-intent phrasing. The old queries matched viral threads, not people asking
+// for leads, replying to those with a sales pitch reads as spam to anyone scrolling.
 const MAPZAP_QUERIES = [
-  "drop your project below",
-  "what are you building",
-  "founders drop your startup",
-  "show us what you're working on",
-  "what's your biggest challenge this month",
-  "drop your startup link",
-  "builders drop",
-  "what are you working on right now",
-  "drop what you're working on",
-  "show me what you're building",
-  "founders show your product",
-  "entrepreneurs drop your business",
-  "small business owners drop",
-  "what problem are you solving",
-  "drop your saas below",
-  "show your product below",
-  "what are you selling",
-  "business owners drop",
-  "drop your business below",
-  "looking to connect with founders",
+  "need more leads for my business",
+  "need local business leads",
+  "how do i find leads for my business",
+  "struggling to find clients",
+  "need a lead list",
+  "where can i find business leads",
+  "need business leads",
+  "looking for local business contacts",
+  "apollo too expensive",
+  "need cheaper lead tool",
 ];
-const AGENCYHIRE_QUERIES = [
-  "how do I get clients for my agency",
-  "struggling to get agency clients",
-  "agency outreach not working",
-  "how to scale my smma",
-  "need more clients for my agency",
-  "agency owner need help",
-  "how to get smma clients",
-  "cold outreach not converting",
-  "agency growth problems",
-  "how to automate outreach",
+
+const FLOWMATE_QUERIES = [
+  "losing leads slow response",
+  "need to follow up with leads faster",
+  "leads go cold",
+  "contractor losing leads",
+  "plumber losing customers",
+  "HVAC company losing leads",
+  "need automated lead follow up",
+  "respond to leads faster",
+  "GoHighLevel too expensive",
+  "need instant lead response",
 ];
+
 const AUTOSUB_QUERIES = [
   "how to automate Reddit outreach",
   "Reddit DM outreach strategy",
@@ -54,39 +50,44 @@ const AUTOSUB_QUERIES = [
   "Reddit growth hacks",
   "outreach automation tools",
 ];
-const ENGAGEMENT_SIGNALS = [
-  "drop", "below", "building", "working on", "founders",
-  "builders", "entrepreneurs", "startup", "saas", "business owners",
-  "show us", "show me", "what are you", "connect with",
-  "let's see", "lets see", "check out", "share your",
+
+const MAPZAP_SIGNALS = [
+  "need leads", "need clients", "need customers", "find leads",
+  "lead list", "lead source", "business leads", "local business",
+  "struggling to find", "apollo", "zoominfo", "prospecting",
 ];
-const AGENCY_SIGNALS = [
-  "agency", "smma", "clients", "outreach", "scale", "automate",
-  "cold outreach", "lead gen", "getting clients", "struggling",
+const FLOWMATE_SIGNALS = [
+  "losing leads", "lose leads", "leads go cold", "slow to respond",
+  "follow up", "missed leads", "respond faster", "gohighlevel",
+  "instant lead", "never miss a lead", "automated follow up",
 ];
 const AUTOSUB_SIGNALS = [
   "reddit", "outreach", "automate", "dms", "lead gen",
   "clients", "marketing", "scale", "cold outreach", "prospecting",
 ];
+
 const MAPZAP_REPLIES = [
-  `building something? if you need local business leads for outreach or prospecting, mapzap.org pulls 100 leads from Google Maps in 60 seconds as a CSV. $49/month unlimited searches, free preview at mapzap.org`,
-  `cool thread. if anyone here does cold outreach or needs local business leads, built mapzap.org for that. 100 leads in 60 seconds from Google Maps, name phone address website as a CSV. $49/month unlimited, free preview available`,
-  `nice. if anyone in this thread needs local business leads for prospecting, mapzap.org pulls 100 from Google Maps in 60 seconds. free to try at mapzap.org`,
-  `great thread. dropping this here for anyone who needs local business leads. mapzap.org pulls 100 businesses from Google Maps in 60 seconds as a downloadable CSV. $49/month unlimited searches`,
-  `for anyone in this thread doing outreach or prospecting, built mapzap.org. pulls 100 local business leads from Google Maps in 60 seconds. name, phone, address, website as a CSV. free preview at mapzap.org`,
+  `if you need local business leads for outreach or prospecting, mapzap.org pulls 100 leads from Google Maps in 60 seconds as a CSV, emails included where available. $19.99/month unlimited searches, free preview at mapzap.org`,
+  `built mapzap.org for exactly this. 100 leads in 60 seconds from Google Maps, name phone address website email as a CSV. $19.99/month unlimited, free preview available`,
+  `mapzap.org might help. pulls 100 local business leads from Google Maps in 60 seconds, emails included. free to try at mapzap.org`,
+  `built this for local business leads. mapzap.org pulls 100 businesses from Google Maps in 60 seconds as a downloadable CSV with emails where available. $19.99/month unlimited searches`,
+  `for anyone doing outreach or prospecting, built mapzap.org. pulls 100 local business leads from Google Maps in 60 seconds. name, phone, address, website, email as a CSV. free preview at mapzap.org`,
 ];
-const AGENCYHIRE_REPLIES = [
-  `i automate agency outreach. built a system that sends 1000+ targeted messages per day across Reddit, Facebook, Discord, and X to your ideal clients. $1,500 to deploy on your accounts in 48hrs, $500/month retainer. proof: mapzap.org. DM me`,
-  `this is solvable with automation. i built an outreach stack that runs 24/7 across Reddit, Facebook, Discord, and X. finds buyers in your niche, messages them automatically. $1,500 setup, $500/month after. https://buy.stripe.com/9B6eVd7vteL23kedQ22Ry0d`,
-  `built an automated outreach system for exactly this. 1000+ targeted messages per day to people actively looking for your service. deploy on your agency in 48hrs for $1,500 flat. $500/month retainer. DM me a scope`,
-  `scale outreach without hiring. full automation stack across Reddit, Facebook, Discord, X. finds your buyers, messages them, runs while you sleep. $1,500 setup, $500/month. proof: mapzap.org marketed entirely with this. https://buy.stripe.com/9B6eVd7vteL23kedQ22Ry0d`,
+
+const FLOWMATE_REPLIES = [
+  `this is a lead response problem. roughly 78% of customers go with whoever responds first. built flowmate.live, it auto texts and emails every new lead within 60 seconds, runs 24/7. $297 first month, $797/month after. flowmate.live`,
+  `built flowmate.live for exactly this. auto texts and emails every new lead within 60 seconds so you stop losing business to whoever responds first. i build it and run it for you. $297 first month, $797/month after.`,
+  `if you're getting leads and not responding instantly you're losing most of them. flowmate.live fixes that, automated follow up within 60 seconds, done for you. $297 first month, $797/month after. flowmate.live`,
+  `this is solvable with automation. flowmate.live texts and emails every new lead within 60 seconds, 24/7, done for you. $297 to try the first month, $797/month after.`,
 ];
+
 const AUTOSUB_REPLIES = [
-  `built AutoSub for exactly this. it automates your Reddit outreach. connect your account, set your keywords and offer, it finds people posting about needing what you sell and DMs them automatically 24/7. $47/month at autosub.online`,
-  `this is what AutoSub solves. automated Reddit DM outreach. you set it up once, it runs forever finding buyers and messaging them. 200+ targeted DMs per day. $47/month at autosub.online`,
-  `built a tool for this. AutoSub scrapes Reddit globally for buyer intent posts matching your keywords and sends your DM automatically. connect your Reddit account and it runs 24/7. $47/month. autosub.online`,
-  `AutoSub handles this. connects to your Reddit account, finds people actively looking for what you sell, DMs them automatically. live dashboard showing all activity. $47/month at autosub.online`,
+  `built AutoSub for exactly this. it automates your Reddit outreach. connect your account, set your keywords and offer, it finds people posting about needing what you sell and DMs them automatically 24/7. $19.99/month at autosub.online`,
+  `this is what AutoSub solves. automated Reddit DM outreach. you set it up once, it runs forever finding buyers and messaging them. 200+ targeted DMs per day. $19.99/month at autosub.online`,
+  `built a tool for this. AutoSub scrapes Reddit globally for buyer intent posts matching your keywords and sends your DM automatically. connect your Reddit account and it runs 24/7. $19.99/month. autosub.online`,
+  `AutoSub handles this. connects to your Reddit account, finds people actively looking for what you sell, DMs them automatically. live dashboard showing all activity. $19.99/month at autosub.online`,
 ];
+
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const pick = arr => arr[Math.floor(Math.random() * arr.length)];
@@ -220,7 +221,7 @@ async function runCycle() {
     await loadSession(page);
     const allQueries = [
       ...MAPZAP_QUERIES.map(q => ({ query: q, type: "MAPZAP" })),
-      ...AGENCYHIRE_QUERIES.map(q => ({ query: q, type: "AGENCYHIRE" })),
+      ...FLOWMATE_QUERIES.map(q => ({ query: q, type: "FLOWMATE" })),
       ...AUTOSUB_QUERIES.map(q => ({ query: q, type: "AUTOSUB" })),
     ].sort(() => Math.random() - 0.5);
     for (const { query, type } of allQueries) {
@@ -229,9 +230,9 @@ async function runCycle() {
         break;
       }
       let signals;
-      if (type === "AGENCYHIRE") signals = AGENCY_SIGNALS;
+      if (type === "FLOWMATE") signals = FLOWMATE_SIGNALS;
       else if (type === "AUTOSUB") signals = AUTOSUB_SIGNALS;
-      else signals = ENGAGEMENT_SIGNALS;
+      else signals = MAPZAP_SIGNALS;
       const tweets = await searchTweets(page, query, signals);
       for (const tweet of tweets) {
         if (repliesThisCycle >= MAX_REPLIES_PER_CYCLE) break;
@@ -240,7 +241,7 @@ async function runCycle() {
           continue;
         }
         let replyText;
-        if (type === "AGENCYHIRE") replyText = pick(AGENCYHIRE_REPLIES);
+        if (type === "FLOWMATE") replyText = pick(FLOWMATE_REPLIES);
         else if (type === "AUTOSUB") replyText = pick(AUTOSUB_REPLIES);
         else replyText = pick(MAPZAP_REPLIES);
         const result = await replyToTweet(page, tweet, replyText);
@@ -263,7 +264,7 @@ async function runCycle() {
 }
 (async () => {
   console.log("=".repeat(60));
-  console.log("XMagnet -- MapZap + AgencyHire + AutoSub Engagement Poster");
+  console.log("XMagnet -- MapZap + FlowMate + AutoSub Engagement Poster");
   console.log("=".repeat(60));
   while (true) {
     await runCycle();
